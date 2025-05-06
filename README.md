@@ -1,2 +1,2 @@
 # AMBA-AHB-APB
-Writing out the AMBA AHB/APB protocols in Verilog.
+Coding the AMBA AHB/APB protocols in Verilog.
