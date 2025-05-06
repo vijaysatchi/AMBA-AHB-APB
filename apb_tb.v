@@ -1,4 +1,4 @@
-`timescale 1ns / 100ps
+`timescale 1ns / 1ns
 module apb_tb;
 	/*reg PCLK, PRESETn, PREADY, PSLVERR, TRANSFER, READ_WRITE;
 	reg [31:0] PADDR_IN, PRDATA;
@@ -55,10 +55,18 @@ module apb_tb;
 		PWDATA_IN = 0;
 		PADDR_IN = 0;
 		READ_WRITE = 0;
-		PRESETn = 0;    
+		#10 PRESETn = 1'b1;
+		#20 PRESETn = 1'b0;
 	end
 	endtask
-
+/*
+	task reset;
+	begin
+		PRESETn = 1'b1;
+		#10 PRESETn = 1'b0;
+	end
+	endtask
+*/
 	task write;
 	begin
 		PWDATA_IN = 2;
@@ -72,6 +80,17 @@ module apb_tb;
 	endtask
 
 	task read;
+	begin
+    	PADDR_IN = 3;
+    	READ_WRITE = 1'b0;
+		@(posedge PCLK);
+		TRANSFER = 1'b1;
+		@(posedge PCLK);
+		TRANSFER = 1'b0;
+	end
+	endtask
+
+	task read2;
 	begin
     	PADDR_IN = 5;
     	READ_WRITE = 1'b0;
@@ -116,8 +135,8 @@ module apb_tb;
 	initialization;
 	write;
 	#70 read;
-	#70 read;
-	$monitor("time=%0t psel=%b penable=%b PRDATA=0x%0h", $time, PSEL, PENABLE, PRDATA);
+	#70 read2;
+	//$monitor("time=%0t psel=%b penable=%b PRDATA=0x%0h", $time, PSEL, PENABLE, PRDATA);
 	end
 
 
