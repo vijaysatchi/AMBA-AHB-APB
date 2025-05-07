@@ -11,11 +11,11 @@ module apb_tb;
 	reg [31:0] PADDR_IN, PWDATA_IN;
 
 	// Wires driven by master
-	wire PSEL, PENABLE, PWRITE;
-	wire [31:0] PADDR, PWDATA, PRDATA;
+	wire PSEL1, PSEL2, PENABLE, PWRITE;
+	wire [31:0] PADDR, PWDATA, PRDATA1 , PRDATA2;
 
 	// Wires driven by slave
-	wire PREADY, PSLVERR;
+	wire PREADY1, PREADY2, PSLVERR;
 	
 	apb_master master(
 	.PRDATA(PRDATA),
@@ -24,26 +24,41 @@ module apb_tb;
 	.PRESETn(PRESETn),
 	.PCLK(PCLK),
 	.READ_WRITE(READ_WRITE),
-	.PSEL(PSEL),
+	.PSEL1(PSEL1),
+	.PSEL2(PSEL2),
 	.PENABLE(PENABLE),
 	.PADDR(PADDR),
 	.PWRITE(PWRITE),
 	.PWDATA(PWDATA),
 	.TRANSFER(TRANSFER),
-	.PREADY(PREADY),
+	.PREADY1(PREADY1),
+	.PREADY2(PREADY2),
 	.PSLVERR(PSLVERR)
 	);
 
-	apb_slave slave(
-	.PSELx(PSEL),
+	apb_slave slave1(
+	.PSELx(PSEL1),
 	.PENABLE(PENABLE),
 	.PADDR(PADDR),
 	.PWRITE(PWRITE),
 	.PRESETn(PRESETn),
 	.PCLK(PCLK),
 	.PWDATA(PWDATA),
-	.PRDATA(PRDATA),
-	.PREADY(PREADY),
+	.PRDATA(PRDATA1),
+	.PREADY(PREADY1),
+	.PSLVERR(PSLVERR)
+	);
+	
+	apb_slave slave2(
+	.PSELx(PSEL2),
+	.PENABLE(PENABLE),
+	.PADDR(PADDR),
+	.PWRITE(PWRITE),
+	.PRESETn(PRESETn),
+	.PCLK(PCLK),
+	.PWDATA(PWDATA),
+	.PRDATA(PRDATA2),
+	.PREADY(PREADY2),
 	.PSLVERR(PSLVERR)
 	);
 
@@ -79,6 +94,18 @@ module apb_tb;
 	end
 	endtask
 
+	task write2;
+	begin
+		PWDATA_IN = 30;
+    	PADDR_IN = 12;
+    	READ_WRITE = 1'b1;
+		@(posedge PCLK);
+		TRANSFER = 1'b1;
+		@(posedge PCLK);
+		TRANSFER = 1'b0;
+	end
+	endtask
+
 	task read;
 	begin
     	PADDR_IN = 3;
@@ -92,7 +119,7 @@ module apb_tb;
 
 	task read2;
 	begin
-    	PADDR_IN = 5;
+    	PADDR_IN = 12;
     	READ_WRITE = 1'b0;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -133,9 +160,10 @@ module apb_tb;
 	initial begin
 	//$display("");
 	initialization;
-	write;
-	#70 read;
+	write2;
 	#70 read2;
+	#140 write;
+	#210 read;
 	//$monitor("time=%0t psel=%b penable=%b PRDATA=0x%0h", $time, PSEL, PENABLE, PRDATA);
 	end
 
