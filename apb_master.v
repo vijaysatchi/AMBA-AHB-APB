@@ -6,6 +6,8 @@ module apb_master(
     input [31:0] PWDATA_IN,
     input PREADY1,
     input PREADY2,
+    input PREADY3,
+    input PREADY4,
     input PSLVERR,
     input TRANSFER,
     input READ_WRITE,
@@ -14,6 +16,8 @@ module apb_master(
     output reg [31:0] PADDR,
     output reg PSEL1,
     output reg PSEL2,	
+    output reg PSEL3,
+    output reg PSEL4,
     output reg PENABLE,
     output reg PWRITE, //write = 1, read = 0
     output reg [31:0] PWDATA
@@ -54,9 +58,15 @@ end
                 2'b00: begin //no transfer, IDLE
                     PSEL1 <= 1'b0;
 		    PSEL2 <= 1'b0;
+		    PSEL3 <= 1'b0;
+ 		    PSEL4 <= 1'b0;
                     PENABLE <= 1'b0;
                     if (TRANSFER) begin
-	                if (PADDR > 32'd10) begin
+	                if (PADDR > 32'd30) begin
+			    PSEL4 <= 1'b1;
+			end else if (PADDR > 32'd20) begin
+			    PSEL3 <= 1'b1;
+			end else if (PADDR > 32'd10) begin
 			    PSEL2 <= 1'b1;
 		    	end else if (PADDR > 32'd0) begin
 			    PSEL1 <= 1'b1;
@@ -65,17 +75,28 @@ end
                     end
                 end
                 2'b01: begin //SETUP
-	            if (PADDR > 32'd10) begin
+		    PENABLE <= 1'b0;
+	            if (PADDR > 32'd30) begin
+			PSEL4 <= 1'b1;
+		    end else if (PADDR > 32'd20) begin
+			PSEL3 <= 1'b1;
+	            end else if (PADDR > 32'd10) begin
 			PSEL2 <= 1'b1;
 		    end else if (PADDR > 32'd0) begin
 			PSEL1 <= 1'b1;
 		    end
-                    PENABLE <= 1'b0;
+                    
     		    state <= 2'b10;   
 		    PENABLE <= 1'b1; //i chnaged this too            
                 end
                 2'b10: begin //ACCESS
-	            if (PADDR > 32'd10) begin
+	            if (PADDR > 32'd30) begin
+			PSEL4 <= 1'b1;
+			$display("current slave number: 4");
+		    end else if (PADDR > 32'd20) begin
+			PSEL3 <= 1'b1;
+			$display("current slave number: 3");
+		    end else if (PADDR > 32'd10) begin
 			PSEL2 <= 1'b1;
 			$display("current slave number: 2");
 		    end else if (PADDR > 32'd0) begin
@@ -84,20 +105,23 @@ end
 		    end
 
                     
- 		    
-                    if ((PREADY2 && !TRANSFER && PADDR > 32'd10) || (PREADY1 && !TRANSFER && PADDR <= 32'd10 && PADDR > 32'd0)) begin
-			if (PADDR > 32'd10) begin
-				PSEL2 <= 1'b0;
+ 		    if (!TRANSFER && ((PREADY4 && PADDR > 32'd30) || (PREADY3 && PADDR <= 32'd30 && PADDR > 32'd20) || (PREADY2 && PADDR <= 32'd20 && PADDR > 32'd10) || (PREADY1 && PADDR <= 32'd10 && PADDR > 32'd0))) begin
+                    	if (PADDR > 32'd30) begin
+			    PSEL4 <= 1'b0;
+		    	end else if (PADDR > 32'd20) begin
+			     PSEL3 <= 1'b0;
+	            	end else if (PADDR > 32'd10) begin
+			     PSEL2 <= 1'b0;
 		    	end else if (PADDR > 32'd0) begin
-				PSEL1 <= 1'b0;
+			     PSEL1 <= 1'b0;
 		    	end
-			PADDR <= 0;
-			PWRITE <= 0;
-			PWDATA <= 0;
-			//PENABLE <= 1'b1;
-                        state <= 2'b00; // go idle
-                    end else if ((PREADY2 && TRANSFER && PADDR > 32'd10) || (PREADY1 && TRANSFER && PADDR <= 32'd10 && PADDR > 32'd0)) begin    
-                        state <= 2'b01; // go setup, begin assert pwrite, penable, paddr, pdata
+		    	PADDR <= 0;
+		    	PWRITE <= 0;
+		    	PWDATA <= 0;
+		    	//PENABLE <= 1'b1;
+                    	state <= 2'b00; // go idle
+                    end else if (TRANSFER && ((PREADY4 && PADDR > 32'd30) || (PREADY3 && PADDR <= 32'd30 && PADDR > 32'd20) || (PREADY2 && PADDR <= 32'd20 && PADDR > 32'd10) || (PREADY1 && PADDR <= 32'd10 && PADDR > 32'd0))) begin
+			state <= 2'b01;// go setup, begin assert pwrite, penable, paddr, pdata
                         /*
 if (!READ_WRITE) begin 
 //READ
@@ -109,7 +133,7 @@ PADDR <= PADDR_IN;
 PWDATA <= PWDATA_IN;
 PWRITE <= 1'b1;
         end */
-                    end else if ((!PREADY2 && PADDR > 32'd10) || (PREADY1 && PADDR <= 32'd10 && PADDR > 32'd0)) begin    
+                    end else if ((!PREADY4  && PADDR > 32'd30) || (!PREADY3 && PADDR <= 32'd30 && PADDR > 32'd20) || (!PREADY2 && PADDR <= 32'd20 && PADDR > 32'd10) || (!PREADY1 && PADDR <= 32'd10 && PADDR > 32'd0)) begin    
                         state <= 2'b10; //go access (loop access)
                     end
                 end
