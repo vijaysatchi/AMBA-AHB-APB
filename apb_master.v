@@ -11,7 +11,7 @@ module apb_master(
     input PSLVERR,
     input TRANSFER,
     input READ_WRITE,
-    input reg [31:0] PADDR_IN,
+    input [31:0] PADDR_IN,
 
     output reg [31:0] PADDR,
     output reg PSEL1,
@@ -23,121 +23,92 @@ module apb_master(
     output reg [31:0] PWDATA
     
 );
-    reg [1:0] state; //00 = idle, 01 = setup, 02 = access    
-    
+    reg [1:0] current_state, next_state; //00 = idle, 01 = setup, 02 = access
+	wire PREADY;
+    parameter [1:0] IDLE = 2'b00, SETUP = 2'b01, ACCESS = 2'b10;
 
-/*
-    initial begin
-        state <= 2'b00;
-    end
+	assign PREADY = PREADY1 || PREADY2 || PREADY3 || PREADY4;
 
-    
-might be worse to have this in another process 
-but who knows at least it look kinda cleaner maybe kinda
-*/
+
+	always @(*) begin
+		case (current_state)
+			IDLE: begin
+				if(TRANSFER)  begin
+					next_state = SETUP;
+				end else begin
+					next_state = IDLE;
+				end
+			end
+			SETUP: begin
+				next_state = ACCESS;
+			end
+			ACCESS: begin
+				if(PREADY && TRANSFER) begin
+					next_state = SETUP;
+				end else if (PREADY && !TRANSFER) begin
+					next_state = IDLE;
+				end else begin
+					next_state = ACCESS;
+				end
+			end
+			default:
+				next_state = IDLE;
+		endcase
+	end
+
 always @ (posedge PCLK) begin
-    if(state == 2'b01) begin
-if (!READ_WRITE) begin 
-//READ
-PADDR <= PADDR_IN;
-PWRITE <= 1'b0;
-end else begin
-//WRITE
-PADDR <= PADDR_IN;
-PWDATA <= PWDATA_IN;
-PWRITE <= 1'b1;
-        end
-    end
+	if(!PRESETn) begin
+		current_state <= IDLE;
+		PENABLE <= 0;
+		PSEL1 <= 0;
+		PSEL2 <= 0;
+		PSEL3 <= 0;
+		PSEL4 <= 0;
+		PADDR <= 0;
+		PWDATA <= 0;
+		PWRITE <= 0;
+	end else begin
+		current_state <= next_state;
+		case(current_state)
+			IDLE: begin
+				PENABLE <= 0;
+				PSEL1 <= 0;
+				PSEL2 <= 0;
+				PSEL3 <= 0;
+				PSEL4 <= 0;
+			end
+			SETUP: begin
+				PENABLE <= 0;
+				PADDR <= PADDR_IN;
+				PWRITE <= READ_WRITE;
+				if(READ_WRITE) 
+					PWDATA <= PWDATA_IN;
+				if(PADDR_IN > 32'd23) begin
+					PSEL1 <= 0;
+					PSEL2 <= 0;
+					PSEL3 <= 0;
+					PSEL4 <= 1;
+				end else if(PADDR_IN > 32'd15) begin
+					PSEL1 <= 0;
+					PSEL2 <= 0;
+					PSEL3 <= 1;
+					PSEL4 <= 0;
+				end else if(PADDR_IN > 32'd7) begin
+					PSEL1 <= 0;
+					PSEL2 <= 1;
+					PSEL3 <= 0;
+					PSEL4 <= 0;
+				end else begin
+					PSEL1 <= 1;
+					PSEL2 <= 0;
+					PSEL3 <= 0;
+					PSEL4 <= 0;
+				end
+			end
+			ACCESS: begin
+				PENABLE <= 1;
+			end
+		endcase
+	end
 end
-
-    always @(posedge PCLK) begin 
-        if (PRESETn == 1'b1) begin
-            state <= 2'b00;
-        end else begin
-            case (state)
-                2'b00: begin //no transfer, IDLE
-                    PSEL1 <= 1'b0;
-		    PSEL2 <= 1'b0;
-		    PSEL3 <= 1'b0;
- 		    PSEL4 <= 1'b0;
-                    PENABLE <= 1'b0;
-                    if (TRANSFER) begin
-	                if (PADDR > 32'd30) begin
-			    PSEL4 <= 1'b1;
-			end else if (PADDR > 32'd20) begin
-			    PSEL3 <= 1'b1;
-			end else if (PADDR > 32'd10) begin
-			    PSEL2 <= 1'b1;
-		    	end else if (PADDR > 32'd0) begin
-			    PSEL1 <= 1'b1;
-		        end
-                        state <= 2'b01;
-                    end
-                end
-                2'b01: begin //SETUP
-		    PENABLE <= 1'b0;
-	            if (PADDR > 32'd30) begin
-			PSEL4 <= 1'b1;
-		    end else if (PADDR > 32'd20) begin
-			PSEL3 <= 1'b1;
-	            end else if (PADDR > 32'd10) begin
-			PSEL2 <= 1'b1;
-		    end else if (PADDR > 32'd0) begin
-			PSEL1 <= 1'b1;
-		    end
-                    
-    		    state <= 2'b10;   
-		    PENABLE <= 1'b1; //i chnaged this too            
-                end
-                2'b10: begin //ACCESS
-	            if (PADDR > 32'd30) begin
-			PSEL4 <= 1'b1;
-			$display("current slave number: 4");
-		    end else if (PADDR > 32'd20) begin
-			PSEL3 <= 1'b1;
-			$display("current slave number: 3");
-		    end else if (PADDR > 32'd10) begin
-			PSEL2 <= 1'b1;
-			$display("current slave number: 2");
-		    end else if (PADDR > 32'd0) begin
-			PSEL1 <= 1'b1;
-			$display("current slave number: 1");
-		    end
-
-                    
- 		    if (!TRANSFER && ((PREADY4 && PADDR > 32'd30) || (PREADY3 && PADDR <= 32'd30 && PADDR > 32'd20) || (PREADY2 && PADDR <= 32'd20 && PADDR > 32'd10) || (PREADY1 && PADDR <= 32'd10 && PADDR > 32'd0))) begin
-                    	if (PADDR > 32'd30) begin
-			    PSEL4 <= 1'b0;
-		    	end else if (PADDR > 32'd20) begin
-			     PSEL3 <= 1'b0;
-	            	end else if (PADDR > 32'd10) begin
-			     PSEL2 <= 1'b0;
-		    	end else if (PADDR > 32'd0) begin
-			     PSEL1 <= 1'b0;
-		    	end
-		    	PADDR <= 0;
-		    	PWRITE <= 0;
-		    	PWDATA <= 0;
-		    	//PENABLE <= 1'b1;
-                    	state <= 2'b00; // go idle
-                    end else if (TRANSFER && ((PREADY4 && PADDR > 32'd30) || (PREADY3 && PADDR <= 32'd30 && PADDR > 32'd20) || (PREADY2 && PADDR <= 32'd20 && PADDR > 32'd10) || (PREADY1 && PADDR <= 32'd10 && PADDR > 32'd0))) begin
-			state <= 2'b01;// go setup, begin assert pwrite, penable, paddr, pdata
-                        /*
-if (!READ_WRITE) begin 
-//READ
-PADDR <= PADDR_IN;
-PWRITE <= 1'b0;
-end else begin
-//WRITE
-PADDR <= PADDR_IN;
-PWDATA <= PWDATA_IN;
-PWRITE <= 1'b1;
-        end */
-                    end else if ((!PREADY4  && PADDR > 32'd30) || (!PREADY3 && PADDR <= 32'd30 && PADDR > 32'd20) || (!PREADY2 && PADDR <= 32'd20 && PADDR > 32'd10) || (!PREADY1 && PADDR <= 32'd10 && PADDR > 32'd0)) begin    
-                        state <= 2'b10; //go access (loop access)
-                    end
-                end
-            endcase
-        end
-    end    
 endmodule
