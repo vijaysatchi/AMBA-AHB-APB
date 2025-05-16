@@ -95,13 +95,13 @@ module apb_tb;
 	task initialization;
 	begin
 	    PCLK=0;
-	    PRESETn = 1'b0;
+	    PRESETn = 1'b1;
     	TRANSFER = 1'b0;
 		PWDATA_IN = 0;
 		PADDR_IN = 0;
 		READ_WRITE = 0;
-		#10 PRESETn = 1'b1;
-		#20 PRESETn = 1'b0;
+		#10 PRESETn = 1'b0;
+		#20 PRESETn = 1'b1;
 	end
 	endtask
 /*
@@ -115,7 +115,7 @@ module apb_tb;
 	task write;
 	begin
 		PWDATA_IN = 2;
-    	PADDR_IN = 3;
+    	PADDR_IN = 1;
     	READ_WRITE = 1'b1;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -128,7 +128,7 @@ module apb_tb;
 	task write2;
 	begin
 		PWDATA_IN = 30;
-    	PADDR_IN = 12;
+    	PADDR_IN = 8;
     	READ_WRITE = 1'b1;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -141,7 +141,7 @@ module apb_tb;
 	task write3;
 	begin
 		PWDATA_IN = 9;
-    	PADDR_IN = 29;
+    	PADDR_IN = 16;
     	READ_WRITE = 1'b1;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -154,7 +154,7 @@ module apb_tb;
 	task write4;
 	begin
 		PWDATA_IN = 69;
-    	PADDR_IN = 31;
+    	PADDR_IN = 24;
     	READ_WRITE = 1'b1;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -166,7 +166,7 @@ module apb_tb;
 
 	task read;
 	begin
-    	PADDR_IN = 3;
+    	PADDR_IN = 1;
     	READ_WRITE = 1'b0;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -178,7 +178,7 @@ module apb_tb;
 
 	task read2;
 	begin
-    	PADDR_IN = 12;
+    	PADDR_IN = 8;
     	READ_WRITE = 1'b0;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -190,7 +190,7 @@ module apb_tb;
 
 	task read3;
 	begin
-    	PADDR_IN = 29;
+    	PADDR_IN = 16;
     	READ_WRITE = 1'b0;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -202,7 +202,7 @@ module apb_tb;
 
 	task read4;
 	begin
-    	PADDR_IN = 31;
+    	PADDR_IN = 24;
     	READ_WRITE = 1'b0;
 		@(posedge PCLK);
 		TRANSFER = 1'b1;
@@ -211,32 +211,6 @@ module apb_tb;
 		#50;
 	end
 	endtask
-	/*
-	initial begin
-    	PCLK = 0;
-    	PWDATA_IN = 2;
-    	PADDR_IN = 3;
-    	READ_WRITE = 1'b1;
-    	PRESETn = 1'b0;
-    	TRANSFER = 1'b0;
-    	#10 PRESETn = 1'b0;
-    	#10 TRANSFER = 1'b1;
-    	#20 TRANSFER = 1'b0;
-
-    	#70 PWDATA_IN = 4;
-    	#70 PADDR_IN = 5;
-    	#70 READ_WRITE = 1'b0;
-    	#70 PRESETn = 1'b0;
-    	#70 TRANSFER = 1'b1;
-    	#80 TRANSFER = 1'b0;
-
-    	#130 PWDATA_IN = 6;
-    	#130 PADDR_IN = 7;
-    	#130 READ_WRITE = 1'b0;
-    	#130 PRESETn = 1'b0;
-    	#130 TRANSFER = 1'b1;
-    	#140 TRANSFER = 1'b0;
-    	end*/
 	
 	always
 	#5 PCLK = !PCLK;
